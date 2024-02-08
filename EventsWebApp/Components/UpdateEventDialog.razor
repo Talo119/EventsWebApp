@@ -1,0 +1,35 @@
+﻿@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-3 mb-n1" />
+            Edit Event
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="update_event.Title" Label="Title Event" />
+        <MudTextField @bind-Value="update_event.Description" Label="Description" />
+        <MudDatePicker Label="Event Date" @bind-Date="update_event.Eventdate" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="SaveEvent">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public UpdateEvent update_event { get; set; } = new UpdateEvent();
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void SaveEvent()
+    {
+        MudDialog.Close(DialogResult.Ok(update_event));
+    }
+}

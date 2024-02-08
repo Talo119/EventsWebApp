@@ -1,0 +1,169 @@
+﻿@page "/events"
+
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IRepositoryGeneric repo
+
+<h3>Events</h3>
+<MudSpacer/>
+<MudButton
+    Class="my-4"
+    Variant="Variant.Filled" 
+    StartIcon="@Icons.Material.Filled.Add" 
+    Color="Color.Primary"
+    OnClick="@(() =>AddEvent())"
+>
+    New Event
+</MudButton>
+
+<MudTable Items="@event_list" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@loading_events" LoadingProgressColor="Color.Info">
+    <HeaderContent>
+        <MudTh>Id</MudTh>
+        <MudTh>Title</MudTh>
+        <MudTh>Description</MudTh>
+        <MudTh>Date</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Id">@context.Id</MudTd>
+            <MudTd DataLabel="Title">@context.Title</MudTd>
+            <MudTd DataLabel="Description">@context.Description</MudTd>
+            <MudTd DataLabel="Date">@context.Eventdate</MudTd>
+            <MudTd DataLabel="Date">
+                <MudIconButton 
+                    Icon="@Icons.Material.Filled.Edit" 
+                    Color="Color.Primary" 
+                    aria-label="edit"
+                    OnClick="@(() => EditEvent(context))"
+                ></MudIconButton>
+                <MudIconButton 
+                    Icon="@Icons.Material.Filled.Delete" 
+                    Color="Color.Error" 
+                    aria-label="delete"
+                    OnClick="@(() => DeleteEvent(context))"></MudIconButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+
+    @code {
+    private bool loading_events { get; set; } = false;
+    private List<ViewEvent> event_list { get; set; } = new List<ViewEvent>();
+    private CreateEvent new_event { get; set; } = new CreateEvent();
+
+
+    protected async override Task OnInitializedAsync()
+    {
+        try
+        {
+            loading_events = true;
+            event_list = await repo.Get<List<ViewEvent>>("api/Events");
+            loading_events = false;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+
+    private async Task AddEvent()
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("new_event", new_event);
+
+        var options = new DialogOptions() { FullWidth = true };
+
+        var dialog = await DialogService.ShowAsync<CreateEvenDialog>("New Event", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            try
+            {
+                var response = await repo.Add<CreateEvent>("api/Events", new_event);
+                if (response.Status)
+                {
+                    Snackbar.Add("Event Added", Severity.Success);
+                    event_list = await repo.Get<List<ViewEvent>>("api/Events");
+                    new_event.Title = string.Empty;
+                    new_event.Description = string.Empty;
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add(ex.Message, Severity.Error);
+            }
+
+        }
+    }
+
+    private async Task EditEvent(ViewEvent itemEvent)
+    {
+        UpdateEvent updateEvent = new UpdateEvent()
+            {
+                Id = itemEvent.Id,
+                Title = itemEvent.Title,
+                Description = itemEvent.Description,
+                Eventdate = itemEvent.Eventdate,
+                User = itemEvent.User
+            };
+        var parameters = new DialogParameters();
+        parameters.Add("update_event", updateEvent);
+
+        var options = new DialogOptions() { FullWidth = true };
+
+        var dialog = await DialogService.ShowAsync<UpdateEventDialog>("Edit Event", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            try
+            {
+                var response = await repo.Update<UpdateEvent>($"api/Events", updateEvent.Id, updateEvent);
+                if (response.Status)
+                {
+                    Snackbar.Add("Event Edited", Severity.Success);
+                    event_list = await repo.Get<List<ViewEvent>>("api/Events");
+                    updateEvent.Title = string.Empty;
+                    updateEvent.Description = string.Empty;
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add(ex.Message, Severity.Error);
+            }
+
+
+        }
+    }
+
+    private async Task DeleteEvent(ViewEvent viewEvent)
+    {
+        var parameters = new DialogParameters<DeleteEventDialog>();
+        parameters.Add(x => x.ContentText, "Do you really want to delete these event? This process cannot be undone.");
+        parameters.Add(x => x.ButtonText, "Delete");
+        parameters.Add(x => x.Color, Color.Error);
+
+        var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+
+        var dialog = await DialogService.ShowAsync<DeleteEventDialog>("Delete", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            try
+            {
+                var response = await repo.Delete<ViewEvent>("api/Events", viewEvent.Id);
+                if (response.Status)
+                {
+                    Snackbar.Add("Event Delited", Severity.Success);
+                    event_list = await repo.Get<List<ViewEvent>>("api/Events");
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add(ex.Message, Severity.Error);
+            }
+        }
+
+    }
+}
